@@ -10,12 +10,14 @@
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/verify.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/verify-auto.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/verify-preview.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/verify-cleanup.ps1
 ```
 
-也可以使用 `pwsh`。这些脚本只加载函数定义，不运行工具的 Windows 入口；网络配置写入、服务、续租、时间和探测状态均使用隔离模拟，临时文件在结束时清理。
+也可以使用 `pwsh`。常规修复测试只加载函数定义，不运行真实网络诊断；网络配置写入、服务、续租、时间和探测状态均使用隔离模拟。清理测试另会在临时目录验证清理入口，不调用真实回收站。临时文件在结束时清理。
 
 - `verify.ps1`：原代理、自动/静态 DNS 的备份恢复和权限边界。
 - `verify-auto.ps1`：多层判断、针对性修复、失败恢复、并发变化、次数限制及 HTML 转义。
+- `verify-cleanup.ps1`：报告归档、最近三次保留、回收站失败保留原件、旧版兼容、运行中/未知内容/链接保护，以及备份不变。清理移动使用临时目录模拟，不调用真实回收站。
 - `verify-preview.ps1`：只读无修复调用、取消、明确确认、旧方案失效、目标变化和不扩大修复范围。
 
 ## 本地网络探测测试
@@ -44,6 +46,6 @@ python tests/verify-probes.py
 python scripts/build_release.py
 ```
 
-生成 `dist/Windows-Net-Rescue-v2.1.0.zip` 和 `dist/SHA256SUMS`。工具包只包含明确列出的运行文件与 MIT 许可证，不打包测试输出、报告、备份或本地历史。
+生成 `dist/Windows-Net-Rescue-v2.2.0.zip` 和 `dist/SHA256SUMS`。工具包只包含明确列出的运行文件与 MIT 许可证，不打包测试输出、报告、备份或本地历史。
 
 打包脚本验证 PowerShell 的 UTF-8 BOM、Windows 启动文件换行与 ASCII 编码，并对 ZIP 逐文件回读核对。

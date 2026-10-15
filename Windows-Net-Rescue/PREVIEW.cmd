@@ -6,7 +6,7 @@ if not exist "%~dp0NetRescue.ps1" (
   pause
   exit /b 1
 )
-"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0NetRescue.ps1" -PreviewRepair
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -STA -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0NetRescue.ps1" -PreviewRepair
 echo.
 pause
 endlocal

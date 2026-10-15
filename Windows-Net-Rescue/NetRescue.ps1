@@ -1,9 +1,12 @@
 ﻿#requires -Version 5.1
 # Offline Windows 10/11 toolkit. Save as UTF-8 with BOM for Windows PowerShell.
 [CmdletBinding()]
-param([switch]$DiagnoseOnly, [switch]$AutoRepair, [switch]$PreviewOnly, [switch]$PreviewRepair)
+param([switch]$DiagnoseOnly, [switch]$AutoRepair, [switch]$PreviewOnly, [switch]$PreviewRepair, [switch]$CleanupReports)
 
 $ErrorActionPreference = 'Stop'
+$cleanupLibrary = Join-Path $PSScriptRoot 'ReportCleanup.ps1'
+if (-not (Test-Path -LiteralPath $cleanupLibrary)) { throw '缺少 ReportCleanup.ps1，请复制或解压整个新版工具文件夹。' }
+. $cleanupLibrary
 $script:ProxyPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
 $script:ProxyNames = @('ProxyEnable', 'ProxyServer', 'ProxyOverride', 'AutoConfigURL')
 
@@ -608,7 +611,7 @@ function Get-RepairPreview($State) {
         $impact = '未准备可执行的修复方案，保持网络配置。'
     }
     $keyData = [ordered]@{
-        Version = '2.1'; Machine = $script:Machine; User = $script:UserSid
+        Version = '2.2'; Machine = $script:Machine; User = $script:UserSid
         Action = $action; Target = $target; CanRepair = $canRepair; Proxy = $State.Fingerprint
         NormalOK = $State.NormalOK; DirectOK = $State.DirectOK; PortClosed = $State.LocalPortClosed
         Protection = $State.Protection; Domain = $State.Facts.Domain; Details = $details
@@ -629,7 +632,7 @@ function Open-ResultReport($Result) {
 function Invoke-RepairPreview {
     param([switch]$Only)
     $script:AutoActions = @()
-    Section '只读检测与修复方案预览 v2.1'
+    Section '只读检测与修复方案预览 v2.2'
     Say '此阶段不会修改代理、DNS、IP、服务或系统时间，也不会清除 DNS 缓存。仅发送测试请求并保存本地报告。'
     $state = $null; $confirmed = $false
     try {
@@ -689,7 +692,7 @@ function Write-ResultHtml($Receipt, [string]$Path) {
     $html = @"
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>网络诊断结果</title><style>
 :root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#f4f2ed;color:#252d2c;font:16px/1.7 system-ui,"Microsoft YaHei",sans-serif}main{max-width:1020px;margin:auto;padding:44px 24px 64px}.eyebrow{font-size:13px;letter-spacing:.12em;color:#56736b}h1{font-size:32px;line-height:1.25;margin:12px 0 24px}h2{font-size:20px;margin:0 0 12px}.card{background:#fff;border:1px solid #dddcd4;border-radius:12px;padding:24px;margin:18px 0}.status{border-left:6px solid #bd7f27}.good{border-left-color:#36745c}.pill{display:inline-block;padding:3px 11px;background:#eef3ef;color:#37614d;border-radius:20px;font-size:13px}.reason{white-space:pre-wrap;font-size:18px}p{margin:10px 0}.muted{color:#66716b;font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.grid .card{margin:0}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:12px 8px;border-bottom:1px solid #e7e7df}code,pre{overflow-wrap:anywhere;font-size:13px;background:#f2f4f1;padding:4px 6px;border-radius:4px}pre{white-space:pre-wrap;padding:16px;max-height:500px;overflow:auto}.scroll{overflow:auto}a{color:#2c6c59}summary{cursor:pointer}li{margin:8px 0}@media(max-width:650px){main{padding:24px 14px}.grid{grid-template-columns:1fr}h1{font-size:27px}.card{padding:18px}}
-</style></head><body><main><div class="eyebrow">WINDOWS NETWORK RESCUE · V2.1 · 本地离线报告</div><h1>网络诊断与修复结果</h1><section class="card status $kind"><span class="pill">$title</span><p class="reason">$reason</p><p class="muted">请重新打开浏览器和语音软件验证。测试通过不代表每个网站、每款软件都已恢复。</p></section>$previewPanel<div class="grid"><section class="card"><h2>本次处理</h2><ul>$operations</ul><p class="muted">自动修复按证据执行。驱动、路由器和认证账号等问题可能仍需要你操作。</p></section><section class="card"><h2>以后再遇到断网</h2><p>先运行 <strong>CHECK-ONLY.cmd</strong> 只读检测；需要确认后修复时运行 <strong>PREVIEW.cmd</strong>。若提示管理员权限，以管理员身份重开 PREVIEW.cmd 并重新确认。</p><p>如需恢复 DNS 或代理，打开 <strong>START.cmd → 菜单 5</strong>。</p><p class="muted">此 HTML 页面只展示结果，不会直接修改系统。工具不会后台常驻。</p></section></div><section class="card"><h2>网页对照测试</h2><div class="scroll"><table><thead><tr><th>阶段</th><th>目标</th><th>路径</th><th>结果</th></tr></thead><tbody>$rows</tbody></table></div></section><section class="card"><h2>本地记录</h2><p>完整报告：<code>$log</code></p><p>本次配置备份：<code>$backupText</code></p><p class="muted">报告和备份不会上传。记录可能包含局域网地址、WiFi 名称或代理配置，分享前请核对。</p><details><summary>查看诊断数据</summary><pre>$json</pre></details></section><p class="muted">需要连接 WiFi 时可打开 Windows 网络设置；疑似认证网络请访问 <a href="http://www.msftconnecttest.com/connecttest.txt">HTTP 测试页面</a>。此报告不依赖 CDN、外部脚本或在线字体。</p></main></body></html>
+</style></head><body><main><div class="eyebrow">WINDOWS NETWORK RESCUE · V2.2 · 本地离线报告</div><h1>网络诊断与修复结果</h1><section class="card status $kind"><span class="pill">$title</span><p class="reason">$reason</p><p class="muted">请重新打开浏览器和语音软件验证。测试通过不代表每个网站、每款软件都已恢复。</p></section>$previewPanel<div class="grid"><section class="card"><h2>本次处理</h2><ul>$operations</ul><p class="muted">自动修复按证据执行。驱动、路由器和认证账号等问题可能仍需要你操作。</p></section><section class="card"><h2>以后再遇到断网</h2><p>先运行 <strong>CHECK-ONLY.cmd</strong> 只读检测；需要确认后修复时运行 <strong>PREVIEW.cmd</strong>。若提示管理员权限，以管理员身份重开 PREVIEW.cmd 并重新确认。</p><p>如需恢复 DNS 或代理，打开 <strong>START.cmd → 菜单 5</strong>。</p><p class="muted">此 HTML 页面只展示结果，不会直接修改系统。工具不会后台常驻。</p></section></div><section class="card"><h2>网页对照测试</h2><div class="scroll"><table><thead><tr><th>阶段</th><th>目标</th><th>路径</th><th>结果</th></tr></thead><tbody>$rows</tbody></table></div></section><section class="card"><h2>本地记录与清理</h2><p>新版默认保留最近 3 次检测记录。用完后关闭检测窗口，双击 <strong>CLEAN-REPORTS.cmd</strong>，查看清理范围并输入 CLEAN，可把剩余报告移入回收站。恢复备份会保留，清理过程不会再生成报告。</p><p>完整报告：<code>$log</code></p><p>本次配置备份：<code>$backupText</code></p><p class="muted">报告和备份不会上传。记录可能包含局域网地址、WiFi 名称或代理配置，分享前请核对。</p><details><summary>查看诊断数据</summary><pre>$json</pre></details></section><p class="muted">需要连接 WiFi 时可打开 Windows 网络设置；疑似认证网络请访问 <a href="http://www.msftconnecttest.com/connecttest.txt">HTTP 测试页面</a>。此报告不依赖 CDN、外部脚本或在线字体。</p></main></body></html>
 "@
     $html | Set-Content -LiteralPath $Path -Encoding UTF8
 }
@@ -700,7 +703,7 @@ function Finish-AutoRepair([string]$Status, [string]$Reason, $Before, $After, [s
     if ($null -ne $Preview) { Say '以上方案尚未执行；HTML 页面只展示结果，确认操作在命令窗口进行。' }
     else { Say '测试仅代表这两个网站的 Windows 网络路径；请重新打开浏览器和语音软件确认。' }
     $base = Join-Path $script:ReportDir ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-auto-result')
-    $receipt = [pscustomobject]@{ Version = '2.1'; Status = $Status; Reason = $Reason; Backup = $Backup; Before = $Before; After = $After; Actions = @($script:AutoActions); PreparedPlan = $Preview; HtmlReport = ($base + '.html') }
+    $receipt = [pscustomobject]@{ Version = '2.2'; Status = $Status; Reason = $Reason; Backup = $Backup; Before = $Before; After = $After; Actions = @($script:AutoActions); PreparedPlan = $Preview; HtmlReport = ($base + '.html') }
     $file = $base + '.json'
     $receipt | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $file -Encoding UTF8
     try { Write-ResultHtml $receipt $receipt.HtmlReport } catch { Say "HTML 报告未生成：$($_.Exception.Message)"; $receipt.HtmlReport = '' }
@@ -710,7 +713,7 @@ function Finish-AutoRepair([string]$Status, [string]$Reason, $Before, $After, [s
 function Auto-Repair {
     param([int]$Depth = 0, [switch]$RequireApproval, $ApprovedPreview = $null)
     if ($Depth -eq 0) { $script:AutoActions = @(); $script:AutoAttempts = @() }
-    Section '自动检测与修复 v2.1'
+    Section '自动检测与修复 v2.2'
     Say '将检查网卡、网络服务、DHCP/IP、路由线索、DNS、代理/VPN、认证、时钟与 HTTPS。按证据启动原本设为自动的网络服务、重新申请 DHCP 地址、请求原时间源同步、处理 DNS 和残留代理。'
     Say 'DNS/代理修改前备份，复测无效则尝试恢复。重新申请 DHCP 可能短暂改变局域网连接；时间同步可能调整系统时钟。'
     Say '不会后台常驻、自动终止 Clash、重置 Winsock、重置 IP、关闭防火墙或自动重启。'
@@ -869,44 +872,56 @@ function Auto-Repair {
 }
 function Main {
     if ($env:OS -ne 'Windows_NT') { throw '本工具只能在 Windows 10/11 上运行。' }
+    if (@(@($AutoRepair, $DiagnoseOnly, $PreviewOnly, $PreviewRepair, $CleanupReports) | Where-Object { [bool]$_ }).Count -gt 1) { throw '各启动模式不能混用。' }
+    $root = Join-Path $env:LOCALAPPDATA 'Windows-Net-Rescue'
+    $script:ReportsRoot = Join-Path $root 'Reports'
+    $script:BackupDir = Join-Path $root 'Backups'
+    if ($CleanupReports) { $null = Invoke-ReportCleanup $script:ReportsRoot $script:BackupDir; return }
     # Windows PowerShell may otherwise inherit legacy TLS defaults. Process-local only.
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $script:UserSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     $script:Machine = [string](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography').MachineGuid
-    $root = Join-Path $env:LOCALAPPDATA 'Windows-Net-Rescue'
-    $script:ReportDir = Join-Path $root 'Reports'
-    $script:BackupDir = Join-Path $root 'Backups'
-    $null = New-Item -ItemType Directory -Path $script:ReportDir, $script:BackupDir -Force
+    $script:ReportDir = New-ReportSession $script:ReportsRoot
+    $null = New-Item -ItemType Directory -Path $script:BackupDir -Force
     $script:Log = Join-Path $script:ReportDir ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-report.txt')
-    Say 'Windows 断网诊断与修复工具 v2.1 / Windows 10、11 / 内置组件，无需下载依赖'
-    Say "运行账户：$([Security.Principal.WindowsIdentity]::GetCurrent().Name)。若 UAC 要求另一账户密码，请注意代理设置只对应运行账户。"
-    if (@(@($AutoRepair, $DiagnoseOnly, $PreviewOnly, $PreviewRepair) | Where-Object { [bool]$_ }).Count -gt 1) { throw '诊断、自动修复、只读预览、确认后修复四种启动模式不能混用。' }
-    if ($PreviewOnly) { $result = Invoke-RepairPreview -Only; Open-ResultReport $result; return }
-    if ($PreviewRepair) { $result = Invoke-RepairPreview; Open-ResultReport $result; return }
-    if ($AutoRepair) { $result = Auto-Repair; Open-ResultReport $result; return }
-    Say 'START.cmd 打开后仅检测；自动修复请选 8 或使用 AUTO-FIX.cmd。不会上传报告、删除 WiFi 密码、关闭防火墙、卸载驱动或自动重启。'
-    try { Diagnose } catch { Say "诊断部分未完成：$($_.Exception.Message)" }
-    if ($DiagnoseOnly) { return }
-    while ($true) {
-        Write-Host "`r`n1 重新诊断     2 清除 DNS 缓存（管理员）`r`n3 暂时关闭当前用户代理     4 修改所选网卡 DNS（管理员）`r`n5 恢复 DNS / 代理备份     6 高级：重置 Winsock（管理员）`r`n7 打开报告文件夹     8 自动检测并修复`r`n9 只读预览并由我确认后修复     0 退出"
-        $choice = Read-Host '输入数字'
-        if ($choice -eq '0') { break }
+    try {
+        Say 'Windows 断网诊断与修复工具 v2.2 / Windows 10、11 / 内置组件，无需下载依赖'
+        Say "运行账户：$([Security.Principal.WindowsIdentity]::GetCurrent().Name)。若 UAC 要求另一账户密码，请注意代理设置只对应运行账户。"
+        Say '每次检测记录集中在一个子文件夹，正常结束时默认保留最近 3 次；旧记录移入回收站，恢复备份始终保留。'
+        if ($PreviewOnly) { $result = Invoke-RepairPreview -Only; Open-ResultReport $result; return }
+        if ($PreviewRepair) { $result = Invoke-RepairPreview; Open-ResultReport $result; return }
+        if ($AutoRepair) { $result = Auto-Repair; Open-ResultReport $result; return }
+        Say 'START.cmd 打开后仅检测；自动修复请选 8 或使用 AUTO-FIX.cmd。不会上传报告、删除 WiFi 密码、关闭防火墙、卸载驱动或自动重启。'
+        try { Diagnose } catch { Say "诊断部分未完成：$($_.Exception.Message)" }
+        if ($DiagnoseOnly) { return }
+        while ($true) {
+            Write-Host "`r`n1 重新诊断     2 清除 DNS 缓存（管理员）`r`n3 暂时关闭当前用户代理     4 修改所选网卡 DNS（管理员）`r`n5 恢复 DNS / 代理备份     6 高级：重置 Winsock（管理员）`r`n7 打开报告文件夹     8 自动检测并修复`r`n9 只读预览并由我确认后修复     10 清理历史报告     0 退出"
+            $choice = Read-Host '输入数字'
+            if ($choice -eq '0') { break }
+            try {
+                switch ($choice) {
+                    '1' { Diagnose }
+                    '2' { Flush-Dns; Diagnose }
+                    '3' { Disable-Proxy; Diagnose }
+                    '4' { Change-Dns; Diagnose }
+                    '5' { Restore-Backup; Diagnose }
+                    '6' { Reset-Winsock }
+                    '7' { Start-Process explorer.exe -ArgumentList ('"' + $script:ReportsRoot + '"') }
+                    '8' { $result = Auto-Repair; Open-ResultReport $result }
+                    '9' { $result = Invoke-RepairPreview; Open-ResultReport $result }
+                    '10' { $null = Invoke-ReportCleanup $script:ReportsRoot $script:BackupDir }
+                    default { Write-Host '请输入菜单数字。' }
+                }
+            } catch { Say "未完成 / 结果需核对：$($_.Exception.Message)" }
+        }
+        Say "已退出。报告保存在：$script:ReportDir"
+    } finally {
         try {
-            switch ($choice) {
-                '1' { Diagnose }
-                '2' { Flush-Dns; Diagnose }
-                '3' { Disable-Proxy; Diagnose }
-                '4' { Change-Dns; Diagnose }
-                '5' { Restore-Backup; Diagnose }
-                '6' { Reset-Winsock }
-                '7' { Start-Process explorer.exe -ArgumentList ('"' + $script:ReportDir + '"') }
-                '8' { $result = Auto-Repair; Open-ResultReport $result }
-                '9' { $result = Invoke-RepairPreview; Open-ResultReport $result }
-                default { Write-Host '请输入菜单数字。' }
-            }
-        } catch { Say "未完成 / 结果需核对：$($_.Exception.Message)" }
+            $retention = Update-ReportRetention $script:ReportsRoot 3
+            if ($retention.MovedFiles -gt 0) { Say ("已整理历史报告：{0} 个文件移入回收站；保留最近 3 次可管理记录和恢复备份。" -f $retention.MovedFiles) }
+            foreach ($message in $retention.Failed) { Say ('旧报告暂未清理：' + $message) }
+        } catch { Write-Host ('报告整理未完成，已保留文件：' + $_.Exception.Message) }
     }
-    Say "已退出。报告保存在：$script:ReportDir"
 }
 
 Main

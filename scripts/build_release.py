@@ -4,9 +4,9 @@ import hashlib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 FILES = (
-    "NetRescue.ps1", "CHECK-ONLY.cmd", "PREVIEW.cmd", "START.cmd", "AUTO-FIX.cmd",
+    "NetRescue.ps1", "ReportCleanup.ps1", "CLEAN-REPORTS.cmd", "CHECK-ONLY.cmd", "PREVIEW.cmd", "START.cmd", "AUTO-FIX.cmd",
     "使用说明.txt", "使用指南.html",
 )
 output = ROOT / "dist"
