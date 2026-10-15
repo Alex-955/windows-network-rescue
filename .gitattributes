@@ -1,0 +1,8 @@
+* text=auto
+# Preserve the Windows-ready bytes in GitHub's source ZIP as well as release ZIPs.
+*.ps1 -text
+*.cmd -text
+*.txt -text
+*.md text eol=lf
+*.py text eol=lf
+*.html text eol=lf

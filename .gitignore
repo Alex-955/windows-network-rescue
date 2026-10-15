@@ -1,0 +1,25 @@
+# Local build products and developer environments
+dist/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+._*
+
+# User data must never be committed
+Reports/
+Backups/
+*-report.txt
+*-Proxy-*.json
+*-Dns-*.json
+*-approved-plan.json
+*-auto-result.json
+*-auto-result.html
+*-infrastructure-before.json
+*-winsock-before.txt
+*-dns.json
+*-verification-output.txt
+verification-output.txt
+nas-delivery*.json
+release*-sha256.json
+archive/
